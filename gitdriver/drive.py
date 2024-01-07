@@ -41,7 +41,7 @@ class GoogleDrive(object):
         if credentials is None:
             credentials = os.path.join(os.environ['HOME'], '.googledrive')
 
-        self.credentials = credentials
+        self.credentials = "gd.conf"
 
     def authenticate(self):
         '''Establish Google credentials.  This will load stored credentials
