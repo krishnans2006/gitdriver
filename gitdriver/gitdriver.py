@@ -9,6 +9,8 @@ import mimetypes
 import subprocess
 import yaml
 import pandoc
+import datetime
+import pytz
 
 from . import pandoc_converter
 from .drive import GoogleDrive, DRIVE_RW_SCOPE
@@ -19,11 +21,14 @@ MIME_TYPE_SUFFIXES = {
     'application/epub+zip': '.epub',
     'text/plain': '.txt',
 }
+EASTERN = pytz.timezone("US/Eastern")
 
 def commit_revision(gd, opts, rev, md, target_dir=None, type_suffix=''):
     # Prepare environment variables to change commit time
     env = os.environ.copy()
     date = rev['modifiedTime']
+    newdate = pytz.utc.localize(datetime.datetime.strptime(date, "%Y-%m-%dT%H:%M:%S.%fZ"))  # 2023-08-09T03:38:09.920Z
+    convdate = datetime.datetime.strftime(newdate.astimezone(EASTERN), "%-m/%-d/%y @ %-I:%M:%S %p")  # 8/8/23 @ 11:38:09 PM
     basename = md.get('name', 'content').replace('/', '_') + type_suffix
     user = rev.get('lastModifyingUser', {}).get('displayName', None)
     email = rev.get('lastModifyingUser', {}).get('emailAddress', None)
@@ -69,7 +74,7 @@ def commit_revision(gd, opts, rev, md, target_dir=None, type_suffix=''):
         # add changes to repository.
         subprocess.call(['git', 'add', converted_filename])
     # committing the changes
-    subprocess.call(['git', 'commit', '-m', 'revision from %s' % date], env=env)
+    subprocess.call(['git', 'commit', '-m', 'Revision from %s' % convdate], env=env)
 
 
 
@@ -105,7 +110,10 @@ def main(opts):
             if revision_matched:
                 print("New revision: " + rev['modifiedTime'])
                 commit_revision(gd, opts, rev, md)
-            if rev['modifiedTime'] in last_commit_message:
+            date = rev['modifiedTime']
+            newdate = pytz.utc.localize(datetime.datetime.strptime(date, "%Y-%m-%dT%H:%M:%S.%fZ"))  # 2023-08-09T03:38:09.920Z
+            convdate = datetime.datetime.strftime(newdate.astimezone(EASTERN), "%-m/%-d/%y @ %-I:%M:%S %p")  # 8/8/23 @ 11:38:09 PM
+            if convdate in last_commit_message:
                 print("Found matching revision: " + rev['modifiedTime'])
                 revision_matched = True
         print("Repository is up to date.")
